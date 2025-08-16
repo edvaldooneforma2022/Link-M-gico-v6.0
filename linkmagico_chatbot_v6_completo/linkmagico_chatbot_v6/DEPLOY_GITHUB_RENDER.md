@@ -36,9 +36,7 @@ Este guia fornece instruções passo a passo para fazer o deploy do LinkMágico 
    │   └── main.py
    ├── requirements.txt
    ├── README.md
-   ├── DEPLOY_GITHUB_RENDER.md
-   ├── render.yaml
-   └── build.sh
+   └── DEPLOY_GITHUB_RENDER.md
    ```
 
 ### Passo 2: Criar Repositório no GitHub
@@ -94,7 +92,7 @@ Este guia fornece instruções passo a passo para fazer o deploy do LinkMágico 
      - type: web
        name: linkmagico-chatbot
        env: python
-       buildCommand: ./build.sh
+       buildCommand: pip install -r requirements.txt
        startCommand: python src/main.py
        envVars:
          - key: PYTHON_VERSION
@@ -103,20 +101,7 @@ Este guia fornece instruções passo a passo para fazer o deploy do LinkMágico 
            value: production
    ```
 
-2. **Criar arquivo `build.sh`:**
-   
-   Crie um arquivo chamado `build.sh` na raiz do projeto e adicione permissão de execução:
-   ```bash
-   #!/usr/bin/env bash
-   set -e
-   pip install -r requirements.txt
-   echo "Build completed successfully!"
-   ```
-   ```bash
-   chmod +x build.sh
-   ```
-
-3. **Atualizar o arquivo `src/main.py` para Render:**
+2. **Atualizar o arquivo `src/main.py` para Render:**
    
    Adicione estas linhas no final do arquivo `src/main.py`:
    ```python
@@ -126,10 +111,10 @@ Este guia fornece instruções passo a passo para fazer o deploy do LinkMágico 
        app.run(host='0.0.0.0', port=port, debug=False)
    ```
 
-4. **Fazer commit das alterações:**
+3. **Fazer commit das alterações:**
    ```bash
    git add .
-   git commit -m "Add Render.com configuration and build script"
+   git commit -m "Add Render.com configuration"
    git push origin main
    ```
 
@@ -155,7 +140,7 @@ Este guia fornece instruções passo a passo para fazer o deploy do LinkMágico 
    ```
    Name: linkmagico-chatbot-v6
    Environment: Python 3
-   Build Command: ./build.sh
+   Build Command: pip install -r requirements.txt
    Start Command: python src/main.py
    ```
 
@@ -250,7 +235,6 @@ O Render está configurado para fazer deploy automático sempre que você fizer 
 1. **Build falha:**
    - Verifique se o `requirements.txt` está correto
    - Confirme que todas as dependências são compatíveis
-   - **Verifique se o `build.sh` tem permissão de execução (`chmod +x build.sh`)**
 
 2. **Aplicação não inicia:**
    - Verifique se o comando de start está correto

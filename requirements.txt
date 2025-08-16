@@ -18,4 +18,3 @@ certifi==2025.7.14
 soupsieve==2.7
 SQLAlchemy==2.0.41
 
-

@@ -1,19 +1,12 @@
 import requests
 import cloudscraper
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from playwright.sync_api import sync_playwright
 import json
 import re
 import time
 import logging
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
-import lxml.html
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -55,12 +48,9 @@ class UniversalWebExtractor:
                 return self._extract_with_requests(url)
             elif method == "cloudscraper":
                 return self._extract_with_cloudscraper(url)
-            elif method == "selenium":
-                return self._extract_with_selenium(url)
-            elif method == "playwright":
-                return self._extract_with_playwright(url)
             else:
-                raise ValueError(f"Método não suportado: {method}")
+                # Se o método for selenium ou playwright, que foram removidos, tentamos com cloudscraper
+                return self._extract_with_cloudscraper(url)
                 
         except Exception as e:
             logger.error(f"Erro na extração de {url}: {e}")
@@ -70,20 +60,12 @@ class UniversalWebExtractor:
         """Detecta o melhor método de extração baseado na URL"""
         domain = urlparse(url).netloc.lower()
         
-        # Sites que geralmente precisam de JavaScript
-        js_heavy_sites = [
-            'facebook.com', 'instagram.com', 'twitter.com', 'linkedin.com',
-            'youtube.com', 'tiktok.com', 'pinterest.com', 'amazon.com'
-        ]
-        
         # Sites com proteção anti-bot conhecida
         protected_sites = [
             'cloudflare', 'shopify', 'wix.com', 'squarespace.com'
         ]
         
-        if any(site in domain for site in js_heavy_sites):
-            return "playwright"
-        elif any(site in domain for site in protected_sites):
+        if any(site in domain for site in protected_sites):
             return "cloudscraper"
         else:
             return "requests"
@@ -112,77 +94,9 @@ class UniversalWebExtractor:
             return self._parse_html_content(soup, url, "cloudscraper")
             
         except Exception as e:
-            logger.warning(f"Cloudscraper falhou para {url}: {e}")
-            # Fallback para selenium
-            return self._extract_with_selenium(url)
-    
-    def _extract_with_selenium(self, url: str) -> Dict:
-        """Extração usando Selenium para sites com JavaScript"""
-        driver = None
-        try:
-            options = Options()
-            options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--window-size=1920,1080')
-            options.add_argument(f'--user-agent={self.headers["User-Agent"]}')
-            
-            driver = webdriver.Chrome(options=options)
-            driver.get(url)
-            
-            # Aguarda carregamento
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            
-            # Scroll para carregar conteúdo lazy-loaded
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            
-            html_content = driver.page_source
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            return self._parse_html_content(soup, url, "selenium")
-            
-        except Exception as e:
-            logger.warning(f"Selenium falhou para {url}: {e}")
-            # Fallback para playwright
-            return self._extract_with_playwright(url)
-        finally:
-            if driver:
-                driver.quit()
-    
-    def _extract_with_playwright(self, url: str) -> Dict:
-        """Extração usando Playwright para máxima compatibilidade"""
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                context = browser.new_context(
-                    user_agent=self.headers['User-Agent'],
-                    viewport={'width': 1920, 'height': 1080}
-                )
-                page = context.new_page()
-                
-                # Intercepta requests para otimizar
-                page.route("**/*.{png,jpg,jpeg,gif,svg,css,woff,woff2}", lambda route: route.abort())
-                
-                page.goto(url, wait_until='networkidle', timeout=30000)
-                
-                # Scroll para carregar conteúdo
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(2000)
-                
-                html_content = page.content()
-                browser.close()
-                
-                soup = BeautifulSoup(html_content, 'html.parser')
-                return self._parse_html_content(soup, url, "playwright")
-                
-        except Exception as e:
-            logger.error(f"Playwright falhou para {url}: {e}")
+            logger.error(f"Cloudscraper falhou para {url}: {e}")
             return self._create_error_response(url, str(e))
-    
+
     def _parse_html_content(self, soup: BeautifulSoup, url: str, method: str) -> Dict:
         """Analisa e extrai dados estruturados do HTML"""
         try:
@@ -419,12 +333,11 @@ class UniversalWebExtractor:
             'twitter': r'twitter\.com/[^/\s]+',
             'linkedin': r'linkedin\.com/[^/\s]+',
             'youtube': r'youtube\.com/[^/\s]+',
-            'whatsapp': r'wa\.me/[^/\s]+'
+            'pinterest': r'pinterest\.com/[^/\s]+'
         }
         
-        page_text = str(soup)
         for platform, pattern in social_patterns.items():
-            matches = re.findall(pattern, page_text, re.IGNORECASE)
+            matches = re.findall(pattern, soup.prettify())
             if matches:
                 social_media[platform] = list(set(matches))
         
@@ -436,44 +349,37 @@ class UniversalWebExtractor:
         for form in soup.find_all('form'):
             form_data = {
                 'action': form.get('action', ''),
-                'method': form.get('method', 'get'),
-                'fields': []
+                'method': form.get('method', 'GET').upper(),
+                'inputs': []
             }
-            
-            for input_elem in form.find_all(['input', 'textarea', 'select']):
-                form_data['fields'].append({
-                    'type': input_elem.get('type', 'text'),
-                    'name': input_elem.get('name', ''),
-                    'placeholder': input_elem.get('placeholder', ''),
-                    'required': input_elem.has_attr('required')
+            for input_tag in form.find_all(['input', 'textarea', 'select']):
+                form_data['inputs'].append({
+                    'type': input_tag.get('type', 'text'),
+                    'name': input_tag.get('name', ''),
+                    'value': input_tag.get('value', '')
                 })
-            
             forms.append(form_data)
         
         return forms
     
     def _extract_clean_text(self, soup: BeautifulSoup) -> str:
-        """Extrai texto limpo para análise"""
-        # Remove scripts, styles, etc.
-        for script in soup(["script", "style", "nav", "header", "footer"]):
-            script.decompose()
-        
+        """Extrai texto limpo e legível da página"""
+        # Remove scripts, styles, e outros elementos não visíveis
+        for script in soup(["script", "style"]):
+            script.extract()
+            
         text = soup.get_text()
-        # Limpa espaços extras
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = ' '.join(chunk for chunk in chunks if chunk)
-        
-        return text
-    
-    def _create_error_response(self, url: str, error: str) -> Dict:
-        """Cria resposta de erro padronizada"""
+        return '\n'.join(chunk for chunk in chunks if chunk)
+
+    def _create_error_response(self, url: str, error_message: str) -> Dict:
+        """Cria uma resposta de erro padronizada"""
         return {
             "url": url,
-            "method": "error",
             "timestamp": time.time(),
             "success": False,
-            "error": error,
-            "data": {}
+            "error": error_message
         }
+
 

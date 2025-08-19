@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-set -x
+set -o errexit  # Para se der erro, parar imediatamente
 
-# Instalar dependências Python
+pip install --upgrade pip
 pip install -r requirements_render.txt
 
-# Instalar apenas os binários do Playwright (sem sudo)
-python -m playwright install chromium
+# Instala navegadores do Playwright
+playwright install --with-deps

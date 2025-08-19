@@ -1,7 +1,6 @@
 flask
 flask-cors
+flask-sqlalchemy
 gunicorn
-sqlalchemy
-requests
 playwright
 playwright-stealth

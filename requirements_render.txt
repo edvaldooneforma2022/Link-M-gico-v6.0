@@ -1,11 +1,18 @@
+# Dependências principais do backend
 flask
 flask-cors
-flask-sqlalchemy
 gunicorn
-sqlalchemy>=2.0.16
-requests
-playwright
-playwright-stealth
+sqlalchemy
+
+# IA / NLP
 openai
-numpy
 scikit-learn
+
+# Web scraping e automação
+playwright
+cloudscraper
+beautifulsoup4
+requests
+
+# Outros utilitários comuns
+python-dotenv

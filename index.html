@@ -244,9 +244,9 @@
         <h1>LinkMágico Chatbot v5.0.1</h1>
         <p class="subtitle">IA Conversacional Inteligente para Vendas Online</p>
         
-            <div class="alert">
-                Sua inteligência artificial conversacional está pronta para impulsionar suas vendas!
-            </div>
+        <div class="alert">
+            Seu assistente de vendas com IA, sempre pronto para mover!
+        </div>
         
         <form id="chatbotForm">
             <div class="form-group">
@@ -259,7 +259,10 @@
                 <input type="url" id="salesUrl" placeholder="https://www.arsenalsecretodosceos.com.br/Nutrileads" required>
             </div>
             
-
+            <!-- <div class="form-group">
+                <label for="customInstructions">💡 Instruções Personalizadas (opcional):</label>
+                <textarea id="customInstructions" placeholder="Adicione instruções específicas para o chatbot, como tom de voz, informações extras, etc."></textarea>
+            </div> -->
             
             <button type="submit" class="btn">🚀 Ativar Chatbot Inteligente</button>
         </form>
@@ -281,9 +284,7 @@
             
             <div class="extracted-data">
                 <strong>📊 Dados Extraídos:</strong>
-                <div id="extractedData">
-                    <p id="pageSummary"></p>
-                </div>
+                <div id="extractedData"></div>
             </div>
         </div>
         
@@ -339,13 +340,17 @@
                 document.getElementById('chatbotLink').textContent = window.location.origin + currentChatbotUrl;
                 
                 // Mostrar dados extraídos
-                document.getElementById("pageSummary").textContent = extractedPageData.data.summary;
+                const extractedDataDiv = document.getElementById('extractedData');
+                extractedDataDiv.innerHTML = `
+                    <p><strong>Título:</strong> ${extractedPageData.title}</p>
+                    <p><strong>Descrição:</strong> ${extractedPageData.description}</p>
+                    <p><strong>Preço:</strong> ${extractedPageData.price}</p>
+                    <p><strong>Benefícios:</strong> ${extractedPageData.benefits.join(', ')}</p>
+                    <p><strong>CTA:</strong> ${extractedPageData.cta}</p>
+                `;
                 
-                document.getElementById("loading").style.display = "none";
-                document.getElementById("result").style.display = "block";
-
-                // Abrir a página do chatbot automaticamente
-                window.open(currentChatbotUrl, "_blank");
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result').style.display = 'block';
                 
             } catch (error) {
                 alert('Erro ao criar chatbot: ' + error.message);

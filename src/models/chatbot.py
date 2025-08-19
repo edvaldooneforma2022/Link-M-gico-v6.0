@@ -1,6 +1,8 @@
-from src.database.db_instance import db
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
+
+db = SQLAlchemy()
 
 class Conversation(db.Model):
     """Modelo para armazenar conversas do chatbot"""
@@ -62,5 +64,4 @@ class KnowledgeBase(db.Model):
             'priority': self.priority,
             'created_at': self.created_at.isoformat()
         }
-
 

@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify, session
-from src.database.db_instance import db
-from src.models.chatbot import Conversation, WebData, KnowledgeBase
-from src.services.ai_engine import AIConversationEngine
+from src.models.chatbot import db, Conversation, WebData, KnowledgeBase
+from src.services.ai_engine_enhanced import EnhancedAIConversationEngine
 from src.services.web_extractor import UniversalWebExtractor
 import json
 import uuid
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 chatbot_bp = Blueprint('chatbot', __name__)
 
 # Instâncias dos serviços
-ai_engine = AIConversationEngine()
+ai_engine = EnhancedAIConversationEngine()
 web_extractor = UniversalWebExtractor()
 
 @chatbot_bp.route('/chat', methods=['POST'])
@@ -127,7 +126,7 @@ def extract_url():
                 web_data = WebData(
                     url=url,
                     title=extracted_data['data'].get('title', ''),
-                    content=extracted_data['data'].get('summary', ''),
+                    content=extracted_data['data'].get('clean_text', '')[:10000],
                     extracted_data=json.dumps(extracted_data['data']),
                     extraction_method=extracted_data['method']
                 )
@@ -278,6 +277,71 @@ def get_analytics():
             'error': 'Erro interno do servidor'
         }), 500
 
+# Rota adicional para compatibilidade com o frontend
+@chatbot_bp.route('/extract', methods=['GET'])
+def extract():
+    """Endpoint para extrair dados de uma URL via GET (compatibilidade frontend)"""
+    try:
+        url = request.args.get('url')
+        
+        if not url:
+            return jsonify({'error': 'URL é obrigatória'}), 400
+        
+        url = url.strip()
+        if not url:
+            return jsonify({'error': 'URL não pode estar vazia'}), 400
+        
+        # Verifica cache primeiro
+        cached_data = WebData.query.filter_by(url=url).first()
+        if cached_data and (datetime.utcnow() - cached_data.last_updated) < timedelta(hours=6):
+            return jsonify({
+                'success': True,
+                'data': json.loads(cached_data.extracted_data),
+                'cached': True
+            })
+        
+        # Extrai dados
+        extracted_data = web_extractor.extract_data(url)
+        
+        if extracted_data['success']:
+            # Salva no cache
+            if cached_data:
+                cached_data.title = extracted_data['data'].get('title', '')
+                cached_data.content = extracted_data['data'].get('clean_text', '')[:10000]
+                cached_data.extracted_data = json.dumps(extracted_data['data'])
+                cached_data.last_updated = datetime.utcnow()
+                cached_data.extraction_method = extracted_data['method']
+            else:
+                web_data = WebData(
+                    url=url,
+                    title=extracted_data['data'].get('title', ''),
+                    content=extracted_data['data'].get('clean_text', '')[:10000],
+                    extracted_data=json.dumps(extracted_data['data']),
+                    extraction_method=extracted_data['method']
+                )
+                db.session.add(web_data)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'data': extracted_data['data'],
+                'cached': False
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': extracted_data.get('error', 'Erro na extração'),
+                'data': {}
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Erro na extração de URL: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Erro interno do servidor'
+        }), 500
+
 def extract_and_cache_web_data(url: str) -> dict:
     """Função auxiliar para extrair e cachear dados da web"""
     try:
@@ -297,7 +361,7 @@ def extract_and_cache_web_data(url: str) -> dict:
             # Salva no cache
             if cached_data:
                 cached_data.title = extracted_data['data'].get('title', '')
-                cached_data.content = extracted_data["data"].get("summary", "")
+                cached_data.content = extracted_data['data'].get('clean_text', '')[:10000]
                 cached_data.extracted_data = json.dumps(extracted_data['data'])
                 cached_data.last_updated = datetime.utcnow()
                 cached_data.extraction_method = extracted_data['method']
@@ -305,7 +369,7 @@ def extract_and_cache_web_data(url: str) -> dict:
                 web_data = WebData(
                     url=url,
                     title=extracted_data['data'].get('title', ''),
-                    content=extracted_data['data'].get('summary', ''),
+                    content=extracted_data['data'].get('clean_text', '')[:10000],
                     extracted_data=json.dumps(extracted_data['data']),
                     extraction_method=extracted_data['method']
                 )
@@ -318,5 +382,4 @@ def extract_and_cache_web_data(url: str) -> dict:
     except Exception as e:
         logger.error(f"Erro ao extrair e cachear dados de {url}: {e}")
         return {'success': False, 'error': str(e)}
-
 

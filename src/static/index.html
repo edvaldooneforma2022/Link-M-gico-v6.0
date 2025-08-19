@@ -13,7 +13,7 @@
         <header class="header">
             <div class="logo">
                 <h1><i class="fas fa-magic"></i> LinkMágico Chatbot IA</h1>
-                <span class="version">Seu assistente de vendas com IA, sempre pronto para inovar!</span>
+                <span class="version">v6.0 - Nova Geração</span>
             </div>
             <div class="status-indicator">
                 <span class="status-dot online"></span>
@@ -27,11 +27,16 @@
             <div class="control-panel">
                 <h2><i class="fas fa-cog"></i> Painel de Controle</h2>
                 
-                <!-- Chatbot Activation Button -->
+                <!-- URL Input Section -->
                 <div class="section">
-                    <button id="activateChatbotBtn" class="btn btn-primary btn-full-width">
-                        <i class="fas fa-rocket"></i> Ativar Chatbot Inteligente
-                    </button>
+                    <h3><i class="fas fa-link"></i> Extração de Dados Web</h3>
+                    <div class="url-input-group">
+                        <input type="url" id="urlInput" placeholder="Cole a URL da página para análise..." class="url-input">
+                        <button id="extractBtn" class="btn btn-primary">
+                            <i class="fas fa-download"></i> Extrair
+                        </button>
+                    </div>
+                    <div id="extractionStatus" class="status-message"></div>
                 </div>
 
                 <!-- Social Media Buttons -->

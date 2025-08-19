@@ -45,6 +45,25 @@ def serve(path):
         else:
             return "index.html not found", 404
 
+@app.route('/chatbot')
+def chatbot():
+    """Serve a interface do chatbot"""
+    static_folder_path = app.static_folder
+    if static_folder_path is None:
+        return "Static folder not configured", 404
+    
+    chatbot_path = os.path.join(static_folder_path, 'chatbot.html')
+    if os.path.exists(chatbot_path):
+        return send_from_directory(static_folder_path, 'chatbot.html')
+    else:
+        return "chatbot.html not found", 404
+
+@app.route('/extract')
+def extract_route():
+    """Rota para extração de dados (compatibilidade)"""
+    from src.routes.chatbot import extract
+    return extract()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

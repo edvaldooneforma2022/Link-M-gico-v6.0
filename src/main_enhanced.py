@@ -55,7 +55,7 @@ def serve(path):
     else:
         index_path = os.path.join(static_folder_path, 'index.html')
         if os.path.exists(index_path):
-            return send_from_directory(static_folder_path, 'index_config.html')
+            return send_from_directory(static_folder_path, 'index.html')
         else:
             return "index.html not found", 404
 

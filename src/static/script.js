@@ -67,19 +67,66 @@ function setupEventListeners() {
     elements.clearChatBtn.addEventListener('click', clearChat);
     elements.newSessionBtn.addEventListener('click', startNewSession);
     
-    // Ativar Chatbot
-    const activateChatbotBtn = document.getElementById('activateChatbotBtn');
+    // Extração de URL
+    const chatbotForm = document.getElementById("chatbotForm");
+    if (chatbotForm) {
+        chatbotForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const robotName = document.getElementById("robotName").value;
+            const salesUrl = document.getElementById("salesUrl").value;
+            const customInstructionsElement = document.getElementById("customInstructions");
+            const customInstructions = customInstructionsElement ? customInstructionsElement.value : "";
+
+            // Mostrar loading
+            const loadingDiv = document.getElementById("loading");
+            const resultDiv = document.getElementById("result");
+            
+            if (loadingDiv) loadingDiv.style.display = "block";
+            if (resultDiv) resultDiv.style.display = "none";
+
+            try {
+                const extractResponse = await fetch(`/extract?url=${encodeURIComponent(salesUrl)}`);
+                const extractData = await extractResponse.json();
+
+                // Mostrar dados extraídos (resumo de 3 linhas)
+                const extractedDataDiv = document.getElementById("extractedData");
+                if (extractedDataDiv && extractData.data) {
+                    const summary = formatExtractedDataSummary(extractData.data);
+                    extractedDataDiv.innerHTML = `<p><strong>📊 Dados Extraídos:</strong></p>${summary}`;
+                }
+
+                // Gerar URL do chatbot
+                const chatbotUrl = `/chatbot?name=${encodeURIComponent(robotName)}&url=${encodeURIComponent(salesUrl)}&instructions=${encodeURIComponent(customInstructions)}`;
+                
+                // Armazenar URL do chatbot para uso posterior
+                window.currentChatbotUrl = chatbotUrl;
+
+                if (loadingDiv) loadingDiv.style.display = "none";
+                if (resultDiv) resultDiv.style.display = "block";
+
+            } catch (error) {
+                alert("Erro ao criar chatbot: " + error.message);
+                if (loadingDiv) loadingDiv.style.display = "none";
+            }
+        });
+    }
+    
+    // Botão Ativar Chatbot
+    const activateChatbotBtn = document.getElementById("activateChatbot");
     if (activateChatbotBtn) {
         activateChatbotBtn.addEventListener('click', function() {
-            document.querySelector('.control-panel').style.display = 'none';
-            document.querySelector('.chat-interface').style.display = 'flex';
-            // Opcional: rolar para o topo da interface do chat
-            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+            if (window.currentChatbotUrl) {
+                window.location.href = window.currentChatbotUrl;
+            } else {
+                alert("Por favor, extraia os dados da URL primeiro.");
+            }
         });
     }
     
     // Botões de redes sociais
-    document.querySelectorAll('.social-buttons .btn').forEach(btn => {
+    const socialBtns = document.querySelectorAll('.social-btn');
+    socialBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const platform = this.dataset.platform;
             handleSocialClick(platform);
@@ -222,60 +269,7 @@ function startNewSession() {
 }
 
 // Funções de Extração de URL
-async function extractUrl() {
-    const url = elements.urlInput.value.trim();
-    if (!url) {
-        showStatus('Por favor, insira uma URL válida', 'error');
-        return;
-    }
-    
-    if (!isValidUrl(url)) {
-        showStatus('URL inválida. Certifique-se de incluir http:// ou https://', 'error');
-        return;
-    }
-    
-    elements.extractBtn.disabled = true;
-    elements.extractBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Extraindo...';
-    showStatus('Extraindo dados da página...', 'info');
-    
-    try {
-        const response = await fetch(`${CONFIG.API_BASE}/extract-url`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                url: url,
-                method: 'auto',
-                force_refresh: false
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            const extractedData = data.data;
-            const cached = data.cached ? ' (cache)' : '';
-            
-            showStatus(`Dados extraídos com sucesso${cached}! Método: ${extractedData.method}`, 'success');
-            
-            // Mostra informações básicas
-            if (extractedData.data && extractedData.data.title) {
-                showStatus(`Página: ${extractedData.data.title}`, 'info');
-            }
-            
-        } else {
-            showStatus(`Erro na extração: ${data.error}`, 'error');
-        }
-        
-    } catch (error) {
-        showStatus('Erro na extração. Verifique a URL e tente novamente.', 'error');
-        console.error('Erro na extração:', error);
-    } finally {
-        elements.extractBtn.disabled = false;
-        elements.extractBtn.innerHTML = '<i class="fas fa-download"></i> Extrair';
-    }
-}
+
 
 // Funções de Redes Sociais
 function handleSocialClick(platform) {
@@ -457,4 +451,18 @@ console.log('✅ Sistema de IA conversacional ativo');
 console.log('✅ Extração universal de dados web ativa');
 console.log('✅ Deep linking multiplataforma ativo');
 console.log('✅ Interface responsiva ativa');
+
+
+
+function formatExtractedDataSummary(data) {
+    let summary = [];
+    if (data.title) summary.push(`Título: ${data.title}`);
+    if (data.description) summary.push(`Descrição: ${data.description}`);
+    if (data.main_content && data.main_content.length > 0) summary.push(`Conteúdo: ${data.main_content[0].substring(0, 100)}...`);
+    
+    // Adicione mais campos conforme desejar, limitando a 3 linhas
+    // Exemplo: if (data.price) summary.push(`Preço: ${data.price}`);
+
+    return summary.slice(0, 3).map(line => `<p>${line}</p>`).join("");
+}
 

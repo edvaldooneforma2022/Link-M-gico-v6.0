@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkMágico Chatbot IA - Conversa</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-title h1 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-y: auto;
+            max-height: 500px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user-message {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .user-message .message-avatar {
+            background: #007bff;
+        }
+
+        .bot-message .message-avatar {
+            background: #28a745;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+        }
+
+        .user-message .message-content {
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message .message-content {
+            background: #f8f9fa;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            color: #666;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            background: #666;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .chat-input-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 12px 16px;
+            border-radius: 20px;
+            background: #f8f9fa;
+            font-size: 1rem;
+            resize: none;
+            min-height: 20px;
+            max-height: 100px;
+        }
+
+        .send-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                padding: 10px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .chat-header {
+                padding: 10px 15px;
+            }
+            
+            .chat-title h1 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="chat-header">
+        <div class="chat-title">
+            <i class="fas fa-robot"></i>
+            <h1 id="chatbotName">LinkMágico Chatbot IA</h1>
+        </div>
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span>Online</span>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <!-- Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <i class="fas fa-magic"></i>
+                <p>Olá! Sou seu assistente virtual inteligente. Como posso ajudá-lo hoje?</p>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="message-avatar bot-message">
+                <i class="fas fa-robot"></i>
+            </div>
+            <span>Digitando</span>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-container">
+            <textarea 
+                id="messageInput" 
+                class="chat-input" 
+                placeholder="Digite sua mensagem..."
+                rows="1"
+            ></textarea>
+            <button id="sendBtn" class="send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Configurações
+        const CONFIG = {
+            API_BASE: '/api/chatbot',
+            SESSION_STORAGE_KEY: 'linkmagico_session_id'
+        };
+
+        // Estado da aplicação
+        let currentSessionId = localStorage.getItem(CONFIG.SESSION_STORAGE_KEY) || generateSessionId();
+        let isTyping = false;
+
+        // Elementos DOM
+        const elements = {
+            messageInput: document.getElementById('messageInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            chatMessages: document.getElementById('chatMessages'),
+            typingIndicator: document.getElementById('typingIndicator'),
+            chatbotName: document.getElementById('chatbotName')
+        };
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChat();
+            setupEventListeners();
+        });
+
+        function initializeChat() {
+            // Pega parâmetros da URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const name = urlParams.get('name');
+            const url = urlParams.get('url');
+            const instructions = urlParams.get('instructions');
+
+            // Atualiza nome do chatbot se fornecido
+            if (name) {
+                elements.chatbotName.textContent = name;
+            }
+
+            // Armazena contexto da URL
+            if (url) {
+                window.chatbotContext = { url, instructions };
+            }
+
+            // Salva session ID
+            localStorage.setItem(CONFIG.SESSION_STORAGE_KEY, currentSessionId);
+            
+            console.log('Chatbot inicializado:', { name, url, sessionId: currentSessionId });
+        }
+
+        function setupEventListeners() {
+            // Enviar mensagem
+            elements.sendBtn.addEventListener('click', sendMessage);
+            elements.messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Auto-resize do textarea
+            elements.messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+            });
+        }
+
+        async function sendMessage() {
+            const message = elements.messageInput.value.trim();
+            if (!message || isTyping) return;
+            
+            // Adiciona mensagem do usuário
+            addMessage(message, 'user');
+            elements.messageInput.value = '';
+            elements.messageInput.style.height = 'auto';
+            
+            // Mostra indicador de digitação
+            showTyping();
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: currentSessionId,
+                        url: window.chatbotContext?.url || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Atualiza session ID se necessário
+                    if (data.session_id) {
+                        currentSessionId = data.session_id;
+                        localStorage.setItem(CONFIG.SESSION_STORAGE_KEY, currentSessionId);
+                    }
+                    
+                    // Adiciona resposta do bot
+                    setTimeout(() => {
+                        hideTyping();
+                        addMessage(data.response, 'bot');
+                    }, 1000 + Math.random() * 2000); // Simula tempo de digitação
+                    
+                } else {
+                    hideTyping();
+                    addMessage(data.response || 'Desculpe, ocorreu um erro. Pode tentar novamente?', 'bot');
+                    console.error('Erro na API:', data.error);
+                }
+                
+            } catch (error) {
+                hideTyping();
+                addMessage('Desculpe, não consegui processar sua mensagem. Verifique sua conexão e tente novamente.', 'bot');
+                console.error('Erro na requisição:', error);
+            }
+        }
+
+        function addMessage(content, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            // Processa o conteúdo para suportar HTML básico
+            const processedContent = content
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            messageContent.innerHTML = processedContent;
+            
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = new Date().toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(messageTime);
+            
+            elements.chatMessages.appendChild(messageDiv);
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
+
+        function showTyping() {
+            isTyping = true;
+            elements.typingIndicator.style.display = 'flex';
+            elements.sendBtn.disabled = true;
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
+
+        function hideTyping() {
+            isTyping = false;
+            elements.typingIndicator.style.display = 'none';
+            elements.sendBtn.disabled = false;
+        }
+
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Log de inicialização
+        console.log('🚀 LinkMágico Chatbot IA - Interface de Conversa');
+    </script>
+</body>
+</html>
+

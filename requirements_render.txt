@@ -8,3 +8,4 @@ playwright
 playwright-stealth
 openai
 numpy
+scikit-learn
